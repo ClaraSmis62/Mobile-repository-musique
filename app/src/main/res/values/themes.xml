@@ -13,4 +13,11 @@
         <item name="android:statusBarColor">?attr/colorPrimaryVariant</item>
         <!-- Customize your theme here. -->
     </style>
+    <style name="BottomNavigationTheme" parent="Widget.Design.BottomNavigationView">
+        <item name ="android:textSize">18sp</item>
+
+    </style>
+
+
+
 </resources>

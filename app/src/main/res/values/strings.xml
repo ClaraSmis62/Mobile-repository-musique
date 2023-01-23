@@ -2,4 +2,8 @@
     <string name="app_name">Repertoire_musique</string>
 
     <string name="home_page_title">Répertoire de musique</string>
+
+    <string name ="bottom_home_item">Accueil</string>
+    <string name ="bottom_Album_item">Albums</string>
+    <string name ="bottom_Song_item">Songs</string>
 </resources>

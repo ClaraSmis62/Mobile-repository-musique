@@ -28,6 +28,23 @@
         android:id="@+id/fragment_container"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:layout_marginTop="70dp" />
+        tools:layout_editor_absoluteX="0dp"
+        tools:layout_editor_absoluteY="10dp" />
+
+    <com.google.android.material.bottomnavigation.BottomNavigationView
+       android:id="@+id/design_navigation_view"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        android:background="@color/teal_200"
+        app:menu="@menu/botton_navigation_menu"
+        app:itemTextColor="@drawable/button_nav_color"
+        app:itemIconTint="@drawable/button_nav_color"
+        android:theme="@style/BottomNavigationTheme"
+
+
+        />
 
 </androidx.constraintlayout.widget.ConstraintLayout>
