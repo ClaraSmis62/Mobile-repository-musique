@@ -1,0 +1,40 @@
+{
+  "project_info": {
+    "project_number": "886691476492",
+    "firebase_url": "https://repertoire-musique-default-rtdb.europe-west1.firebasedatabase.app",
+    "project_id": "repertoire-musique",
+    "storage_bucket": "repertoire-musique.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:886691476492:android:c47cfa39a4fd96f286aa29",
+        "android_client_info": {
+          "package_name": "fr.eilco.repertoire_musique"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "886691476492-9e27avisk3u67kdq1ojigauo9l331vg3.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyC61sceeS2tTpkQhrlvT9q_nutO5OiQbMQ"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "886691476492-9e27avisk3u67kdq1ojigauo9l331vg3.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
