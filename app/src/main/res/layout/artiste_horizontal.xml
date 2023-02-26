@@ -1,17 +1,27 @@
 <?xml version="1.0" encoding="utf-8"?>
 <androidx.cardview.widget.CardView xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
-    android:orientation="vertical"
-    android:layout_width="200dp"
-    android:layout_height="200dp"
+        android:id="@+id/cardViewName"
+        android:layout_width="250dp"
+        android:layout_height="100dp"
+        app:cardBackgroundColor="@color/teal_200"
+        app:cardCornerRadius="8dp"
+        app:cardElevation="5dp"
     android:layout_marginLeft="10dp"
-    app:cardCornerRadius="20dp"
-    app:cardElevation="8dp">
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+    android:layout_marginTop="100dp">
 
-    <ImageView
-        android:id="@+id/artiste_image"
-        android:layout_width="match_parent"
-        android:layout_height="200dp"
-        android:scaleType="centerCrop"
-        android:src="@drawable/loud" />
-</androidx.cardview.widget.CardView>
+
+        <TextView
+            android:id="@+id/Nom_artiste"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="35dp"
+            android:text="Nom de l'artiste"
+            style="@style/Default"
+            android:textAlignment="center"
+            android:textStyle="bold" />
+    </androidx.cardview.widget.CardView>
+
+

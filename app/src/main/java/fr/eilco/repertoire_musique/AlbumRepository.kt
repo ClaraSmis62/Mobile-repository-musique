@@ -6,7 +6,6 @@ import com.google.firebase.database.FirebaseDatabase
 import com.google.firebase.database.ValueEventListener
 import fr.eilco.repertoire_musique.AlbumRepository.Singleton.albumList
 import fr.eilco.repertoire_musique.AlbumRepository.Singleton.databaseRef
-import javax.security.auth.callback.Callback
 
 class AlbumRepository {
 
@@ -18,7 +17,7 @@ class AlbumRepository {
         val albumList = arrayListOf<AlbumModel>()
     }
 
-    fun updateDate(callback: () -> Unit){
+    fun updateData(callback: () -> Unit){
         // absorber les données depuis la BDD pour ajouter dans la liste
 
          databaseRef.addValueEventListener(object : ValueEventListener{

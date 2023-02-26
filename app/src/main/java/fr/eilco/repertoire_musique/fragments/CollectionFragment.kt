@@ -1,62 +1,140 @@
 package fr.eilco.repertoire_musique.fragments
 
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.ProgressBar
 import androidx.fragment.app.Fragment
+import androidx.lifecycle.MutableLiveData
+import androidx.lifecycle.Observer
+import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
-import androidx.recyclerview.widget.RecyclerView.ItemDecoration
+import com.google.gson.GsonBuilder
 import fr.eilco.repertoire_musique.AlbumModel
 import fr.eilco.repertoire_musique.MainActivity
 import fr.eilco.repertoire_musique.R
-import fr.eilco.repertoire_musique.adapter.ArtisteAdapter
+import fr.eilco.repertoire_musique.adapter.AlbumAdapter
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import okhttp3.*
+import org.json.JSONObject
+import java.io.FileNotFoundException
+import java.io.IOException
+import java.net.URL
 
 
 class CollectionFragment (
     private val context: MainActivity
         ): Fragment(){
+    private lateinit var albumAdapter : AlbumAdapter
+    private lateinit var progressBar: ProgressBar
+    private val album = arrayListOf<AlbumModel>()
+    val handler = Handler(Looper.getMainLooper())
+    val albumListLiveData: MutableLiveData<List<AlbumModel>> = MutableLiveData()
+    var requete : String = ""
     override fun onCreateView(
         inflater: LayoutInflater,
         container: ViewGroup?,
         savedInstanceState: Bundle?
-    ): View? {
+    ): View {
 
-        val SongList = arrayListOf<AlbumModel>()
-
-        //Enregistrement premier album
-        SongList.add(
-            AlbumModel(
-            "Justice",
-            "2021",
-            "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wCEAAoHCBYWFRgWFRUYGBgaHBgYGBwaGhocHBkaHhgcGRoaGhgcIS4lHB8rIRoaJjgmKy8xNTU1GiQ7QDs0Py40NTEBDAwMEA8QHxISHzYsJSs1NzQ0NDc1NDQ2NDQxNDQ0NDQ0NDQ0NDE0NDQ0NDQ0NDQ0NDQ0NDQ0NjQ0NDQ0NDQ0NP/AABEIAOEA4QMBIgACEQEDEQH/xAAbAAABBQEBAAAAAAAAAAAAAAAAAgMEBQYBB//EAEoQAAEDAQQFBwcFEAIDAQAAAAEAAhEDBBIhMQUGQVFhEyIycYGRsQdCUnKh0fAjgrPBwhQVFhckMzRDU1Ric5KisvF04Qhj0pP/xAAaAQACAwEBAAAAAAAAAAAAAAAAAQIDBAUG/8QAKREAAgIBBAEDBAIDAAAAAAAAAAECEQMEEiExQRMyMyJRcaGBkRSx8P/aAAwDAQACEQMRAD8A9mQhCAOKr0yej876laKn08ej876kIryuoMrHuTD3Ic5NucrIxObKQl5TLylOcmnFXRRnlIQ8pBSnFIViKGJe8NBJyHxsTb7QwZn2HeW+ITyEw4EMqA5HaRtzAn6kj7pZv2TkfSu7t+CeTVrqlrHvAvFrXODZi8Q0mJ2TCQ1TdHWVWmYOUz2GCuOrtGZ2A7ciYHtWG/GIf3Yf/qf/AIV/qvrCbXyk0rgZd8+9N69h0REXfaoxyRk6TL56bJCO5rj8ounWhozPsO4n6ilseCARkcR1JSFMz8AuhcQgQ4wp5hUdpTrSoNFkWSWuT7XKI1yeY9VSiaIyLrQp5x6j4hXiz+gjzz1HxC0CpapnTwO4HUIQkXghCEACEIQBxUmsR6Hzvsq7VBrMeh877KlFWyjUOsbKZz025ySXJBctCiciUjrnJpxQ5ySppFLZV6waXFmpioWF4LgwgECJBIOPVHas5+MKn+wf/W33K/1tst+yVmxiGXx1tId9kjtXj6pySlF8HR0mDHlg3JcpnpP4cs5LlORf0wy7ebPRLpmOCj/jCZ+7v/rb7lhOV+TufxB/9pb9asNC6BqWltR1MiWBuBwvl080OyBgbd4yUVkk+EXvSYIptrj8mr/GEz93f/W33KvtuvtVxIp02BhEQ8Oc7EQcWuA9iyVei5jix7S1zTDmuEEHiFotB6vUbSwBloLawkvY5oIj+AAgkcZ7Alvm+LG8GDGt1cf2ZkBXOg9YatlDm020zfIJvNcTgIEXXDBVdppXHvYTJa5zZ33XET7E6+yEUWVZwe97AI9BrDM8b8RwUE2naNMlGSp9M2tLygtutvUHF0C8WuABdGN0GSBO8pX4wmfu7/62+5efLU6H1PdaLPyweA9xNxp6MNcWuvmJBJBiN3HCyM5vhGXJp9PBbmqLqp5QKYOFB5EDG80ZgEiI2HDsSR5QWfu7/wCtvuWL0xYeRrPpXr10gTESboJw2YlP6Et1Gm5xrWcVg66GgmLpBMnLbI7kepK6bD/Ew7NyVnsiU0pJQCtLRxrHmuTrXqMCltcouJZGRfaun5Q+qfELSLLatH5Q+qfELUrLNUzsaV3jR1CEKJpBCEIAEIQgDizutf6v5/2Volm9bf1fz/sqeP3Iz6v4WZ8uXCUmVxa6OE2dJVFrVoQWmlDY5RsuYd+9hO4+wwVeISaTVMcJuElJdo8Rs9pqUi8NJYXNdTeMjdODmkbDgpNj0YX2evWg/JmmBxvOId3AtPavVq+hrO9xe6hTc44kloJJ3kpxmjqLWOY2k0MdN5rWgB0iDI24AKn0X5Z0nr41wueLPE1daE1jq2ZjmU2sIc68S5riZgCJDhhh7SvQRomxQ13IU4c01BzfNF2f8hglfeax3iz7np3gJPNGSSxyXKZOWsxyVOLowmsGsLbTSpg0misCbzwIhoyDMZgziDMRxlManfptDrd/g5eg09EWMifuZg5xZiwdIEtPtBHYnLHYbI2p8nSY17C7ENgiIBg/OievcUbHuTbIPVY1Bwin5/Z5fp9kWquP/bUPe4n61N0iyLDZD6T7Qf7g36l6DbrDZL4NWjTLnkmS0Eky1uJ24ub3py0WOzXLrqLC2mYDS0Q0uIJug4CS4Sj0++Q/zVUeHx+zx+6YmDAIBMYAmYBO8we4q70drRXo2c0GQMZY7zmAklwAyMk4E5SeEehfc9lptu8kxrao5zQ1sOAiJG2L4iJzwSBoex3yz7np3gJPNbkULG10yUtXjkvqi67PK7da31XuqPgucQSQIBMATHYpmhLdRpFxrWdtYOuhocYukEyRgc5HcvSaOirHUxFCmcG5tA5sQ3sgexPfg/Zf3el/SELFK7sHrce3a00WpXEShabOSCUCkoSGXuqx+Vd6p8WrVLJ6qfnXeqfELWLLl9x2tF8SFIQhVmsEIQgAQhCAOLN63fq/nfZWkWb1v/V/O+yp4/cjNq/hZm0LiC5aXI4YEolcmUklR3BQolIeQQQfYSD3jELhdKZeYUXMYVKTIaC0c0Q3PAYYYZjAYHDALjgL145jDM4dQmB1pmpUhRH2iNqg5kkmycXNyAyJd2klxPeSUkBt69dF6HC9thxBcJ4loPYoHLHYgFx4KDy0Spk+qGuILsYkZkYEgkGMxgMDuSn3CDPnEE5jERBkbRA7lBFZrJL8dg50Qd6TeUVnVhtZPexjgAQTAIzOIMSDjzgYEg7k42L1/GTniYPWJhVfLJYtSmsgtrLKixjBDAGgxltgRPXAGPBOioqxtWUttQ/GasUxNMs2vS5UKk9SL+0p7yFDpK4CmmyTOzcnQFYpBRe6q/nT6h8Qtaslqr+dPqHxC1qz5fcdrRfEvyzqEIVZrBCEIAEIQgDizWt5/N/P+ytKsxrl+q+f9lSi6Zm1fwszZck3kmUDjkpymcMVeXHFNucgyRxVEshJKzjimazwMz8fUlvYYyhQrbZXPaWglrjHOG2NhVLzE4x55FuO5RK7G57VJsFjqXQHYlctdC7IeQ3bidm/BUvUrdtTJqDXPgrA8gwJOO/BP1GvaJc0jgc84y24hNsFwue+65sGGyOeNhx2TuxVvo3SFlc0NqVGPfJwvZFzi6PbE8FJOUnwWUidqxZqTyXVg0gbxOO9VesNdgqO5OLs4dS1dKzjk4puY0Y5wBjhmI9oXnWmKLqbywkOIzIBuznzZiRliq1Cal9Sou2pxUV+RLbVJ2KTTrg8VRuqEYJdJ60K0KWLg1VmF5W33uwB7llrHaiIlbKhX5gc4gYbSqZ5JRaopjjTbTIb6FwTs7IXGYwSDw49QSwHvMuECeaMcvSdx4fAURG9aYZOCMoKJ0ZrspGYlJL1ojMokaDVQ/LO9Q+IWwWO1RPyrvUPiFsUpO2djRfEvyzqEIUTWCEIQAIQhAHAs5ra4Dk5E9LbHorRrMa4jCl877KLoz6r4mZ1xYRg1wPA++U2y4YDnOHGAQO73IBgpDmqqczjEg2UAxfBwkRlnlkn2UY2DvTNFkZFTKbjCx5MhqxxX2Eizz1fG1d+96eBS2Vdi52XMzXCESM6xYZ4bI3rN2+ysc+895gCNkYbMNpJV5p7SPJsABALpidjWi84gbT7wvONM6We+C0GHXm4Y3WneMpkTirtFik/rfkjmttRiXmja1+q240NYwEPaQDlAZiJMgeKNYqkggGzh37OoxrnEbxjI71J1VpG6CSS44knjsWrtFhpvANRjHEZXmgx3hdmEHt4MUfda8Gc1bpubSDakgHFmZDB6N48ZInYRuTGs9AuYHtHOp57Zbt7s+9T9ZLdaabHGg6k1rWklub3CDkPNAg7yVQWbW2i2ztNTnvcDzW5zkSdjR8BEo2qJxjLcpR55M/y85wpVmYHHHBV4tLHv5gLWudABPRnYT9a0Ni0Q9jvlWODQR0YJJOQbBxKy5JbeOmdFxTRbjQNxl+8SBBwGJnYBtPBTLNZHvgnNvRBghh2SB5/h7TZ2aiHNaXTAEMAPNbskb3Rhe7jjjNDmgAAQBl/2uVPV7fpu2Q9JdkRjYzTbnAOxMNO3cnLRUAUK0EvjAxI7tvxxWvBn3GScaJFsew3QzICDmJKjBKexAbjC6EMl8mSSbZeaoj5Z3qH/Jq2KyOqZHLOAIJDDPDnBa5XnV0fxIUhCEGsEIQgAQhCAOBZjXI/msfT+ytOFkdd6wBoNxl3KR2XNvaFGXXBRqfiZnyzI/7XGjFcp2hrmiJwJBkQeH1pxrhgsslJnJqmSKYUimQot9vbsHuSX2kgwWnIE4YLPPGy+MkiyvJsujao5cQQDOIlNV7YxrZe4NEYl2Ax3lYZ4ZPwaI5EZvWuvffMOIY2GuaRIvGHEgnEc3YCsbSbDhduuMxg4yIxJN3hvg8FdaxW6k17adnc27dLnuZdu7eaSMzhj1q/1d0K1tMPeOe4Oe6eN3AHbguvghUUqISbhFyl5LfR72sY0DcPBSq9YuESI61ldPUqzPzNSRuu4gYccQspb9I2lgIdVfPOIhuEAxidi2KVcUZsWCU1w0bHTmhWlhcwUpEkkM50xsf0gcN68xrscDexLSYBzywA7owV1Z9I1yA7lXukC9lgCDGBPDNWti1aDi9jpaHXcxBF5gMwev2SqpzUeX0bsMJYrUnZlbC8A3nYsyLci/g3d1r1bQlyoxtSQWxdAyjYWkbOJzd1YLzK0aKcx5Y9xDmloORGJjDGY2yRjKXZdI1LM8cm4lubmmLrsxjBPfmqdVgeeH0On/s0tPtHsvKCEw6tdBnZwJKqbHpAvpsqU23mOAk3hzTtBG8Lr7RUDpN0MwE5dYPVzl5+GmanUiqUi2stAVZBcWTIYZbLnQDkc8CO9P0tDtewB5c43hMEsDS0giYM4lRdB29kVDWeyWvEXiMxtnHGCO5RbJptpe834YXEXBeJgQ1h4knGMF28WOMIqkJpJWW2lGNvNuNF4tLsAGgtacXYbpxPEKspsc8m5kDF6cJ29kbVJ0ywS0seDeaQ68QYaXYhsAxi3PrSbLaWsBBEXgACBJwOR4K1VuMM1Fz5JmpbS201GE3i1jheGR57fat4s3oKyBtU1ASb7Du3tOzatItK6Ohp41CjqEITLwQhCABCEIA4sR5Qapa+zQJk1WnA4Ahh+pbdZXXWkHclOy+R1wEpdFOo+N2Z5jG4BzS2Rekghp3Xdp696q7zOW5z3Agw0S4SA5x6OAIxAnqVk5zG7JJGcnYSI8F1zWuAJAMEETjkqL5ObuSfRWaz2M1GC5g5mLeIMBwPcD2BSbRbrr2UnNPygAD9k4wDhngFKdWbMmB2+9VGsmkmU6Zc0tc+RyYGwnzoGwY9yh7ntQRuSr/uSTpvT9Kk67Jc8CLrcAMjDnbMBksPpXSfLul55om61phreqczxVJUrFxxcSTiScSTtTd/itePFGHPn7myOGuSS6m3ZIPWVtdWtOk0uRqHnt5rXA9Juw9YyPCDvWBD1Js1dzTIJB3q2kwy43KNHotntpuF79okAHLaZkLC6btTXl3OcA4yG5zjj7E5U0wQxwMkuOOM9g3BZ97y507ScFTK2+SvTYHGTbLvQdSlebytTmtIIY4w2SDmNuzPjvW9bSDGB9Opyjobec4dOGBoxDojDYvK/uN/o+0Kfot9opOBZMCSW3+aZzkTE8VnzaeU+n/BpmvKZP1pbUc7lXGDzGG7IECSCcd/iFQl5OZJ6zK1Fp0wwtivTLbwIMQ4cYIM+xZJz84y2dSswpqO2Sqh4pSkqaoutD6ZqULzWEXX5h2Infw3f6Wq0XpWrWvsqMbhTe/I5jZnBzXnYeVrdWtMuLOTdDi0Q2QCSzdJ3ZdUJZMMJPdSshnTUW0iPZNMGniKQmQcQTERsvcE6dYBI+SY0gz0SJ9vxmr4PpO6dMDqkezJNVrDZzkCOweIAS9NPx+zP68X2ivGthHmzvxKep65DDmCfWP1tSbRoGm4cwieL8faFXVdW3jG6SOEOHeCELHH7BuwS74PT/J5rM61VnUyBzKbnAyCTL2jHAb16KvGvI/YTTtlWT+ocNv7Rm9eyhXJUjbirbwdQhCZYCEIQAIQhAHFgfKhpdtmFAuBN41Ijhc963y828rmjxVFmLuiw1iTIaMQyBeOA29yTVohkScWpdGUZpmpUsz67GC7TIBc4+c5waGhvnT7FQO01aiDzoByuwI4zmtWyiynot+HNfVaQG+eA6AA8iJBYSQMgJ3LKG089sNDBeaCek4CcSC7AHsUNq+xkahHpf2Ks+i6tRpe+pORlxcRGWfRHeoOlK4YQxrw8NbEjESTegdUraVtWWE3nVqrj/EWnuwwWb0joFjXmHvxn0fcro4WuSGLPBy5f8UZrlCklXVr0I1rbzXvJloxiMXNE5cVM/Bqn6b/AO33KeyRpeeCV2ZxjgF3lloRq3T2vf8A2+5OfgvTIwqP/t9yeyRB6nF9/wBGac+cCoxMFakaAptIvufE/wAMeCmW3QbX3eRpNcSTgxo5zQJJ7IKTg/ILUQTSXkqGEFT2NG+F06FrtE8i/sAJ7gU0+i9o5zHtg7WuH1KS47Km1LplRp13OaOB8QPqVWrx7WuzAMDaFFr0GE7o3ABVSVuzVjklFIr07Zq5Y9r25gz18E+bI3Y+eG3/ALTTaInEkJE7TVGxbbA5oc3IgEdoSX2uc/YpegNANfZ6by54kuww6EugjDq7FY/gzT9N/wDb7lJYpdnInKEZNWZx1qxzHBOMt7h5xHV71fHVan6b/wC33KNbtW2Mpve175a1zgObBIBOOCfpyGsmNujQeTF4daahvSTSM/1txLs16mvHfI++bVV/ku+kYvYlWzp4VUaOoQhBcCEIQAIQhAHF5j5ZhhZeut4U16cvLvLS6BZc863hTQQn7WZ+0sYzRbDe+Uc9rroeXYYglzPMMYYgHBZGq6QrKloe1PaHNF5rhI57YIOO9Ofg1aACSzIT0mk9glT2yfgxyyQvtf2aZtuv0abtrmBzuuIPtlU9d5L5kHeO3YmNEPcaZBBgOc0dWBw4TPcitRJ2GeorSncUY1BKbQq2UQW83EXqZ6oe0qY10j4lQaT3NMEEgwThuM/Upj6ZAvNBjq+ITX3HLqjrzO7uTTaxac5CotMaVcyqAw4BvOaciSST1YR3qfo3SDKuWDoxac43jeFBzTdE3hko7muC2faGXbzy0N3mAO9R7DaWu59F4Ia4txwEiDhOzFJq0QeaWyDgQRgexZvTGiOTF9vQwBBzbJgY7QlJtchixxn9LdN/0ejffqmGXnyCMC0C8Sf4YwIVNbtO1KgLafybd8889o6PZjxUHQDw+zMDmyOcOqHOUa32d7CRBu7Dw3Him5NqyEccYycfKZEfZW78VT2hpac1Ns9RxdUMHMdhuj47FHdSc68YOHDaqZc9HRgnF8sc0Po42iqKd8NLg4glt6SBMRI2TtWxsmqtnoQ+u81MQAHANbPqCSe0kKi1OsjjamGCAwPcf6bvi4LQ6xPPKRJi6MN04nDuTjUY7mjNqckt+yLpUaQuAgSBODRvwyHYF1Y/Qtoea1NrnEht5oBOQuuy4LXrRCe5Wc3JHa6GLdXLKb3gXi1pIG+NmCyVu1lqOY9pogBzXNJl2AIInJbVQ9M/o9b+W/8AwKjNN9MniaTVqyv8jTptdX+QfpGL2ZeMeRofldX+Q76Ri9nWQ72P2nUIQgmCEIQAIQhAHF5b5a+jZeut4U16kvLPLb0bL11vCmhEZ9GO1U0tcdyTzzHHmn0XHZ1Hx61tmVF5KXrT6O1mN1rHMc94ESCBI3mcuJV+OdKmcvPgcnuii+rXGEtaABJIHXJPiq1ukGms6lua146y4g+y73qp0prKy+4NYXZYgiDhs3rP0tJRXNWDBkRtuxAHsCcsi4oli00mm5Lwb2+OHf8AEJt1qu+5Zc6wM2Mf7PemqmnWnzHez3p+ovuC00m+UXFrsFnqONQtJJ6XOcMgBkDuAVY3RLW1g9riKQ52DjeBHmTnnt3KCdLCZDSO5LbpgegeOSrcos0rHkSqzYC3t4d6qtZLSHUHAek3/IKj++jZwa4dyatekQ9haGkZewym52iENM1JSNHqxaQKAB2Oft3mfrVw+0Nc0tdERGPx/pYSwaR5NpaWk4znwA+pShpsege9Cmqojk00pTckO2Z8PrDZfcJPAkDwUhlpaAWxiTJM7N0Qq3Rmlm074ey+HuvbMO9N/dTXPhjXC8QACRhPHcoXwaNrdpr+T0bVCygU3VI6ZhvqtnxM9ystJaLZWAvS1w84ZxOI+MlldC6cdQa2m5pexohuxzRuk5hWH4ZU8uSf3tVsZRcaZzMkJym2kaBljptDIa3mdDe3CDBzxkylvKzNXXBkiKb4nHEZRs45Jmprez9m/vap74eCv0cj8Gg0hT5Sm9kxfaWznE7Y2rH23VgsY9/LA3GudFyJgTE3lJdraz9m/vaolu1oY+m9gY8F7XNBJG0ETgoTlFl+LHljxXBf+Rl35ZVH/oP0jF7QvEvIoPyyr/Id9Ixe2rOdWHR1CEIJghCEACEIQBxeT+XTo2T1q3hTXrC8n8ubJbZJdADq07zhTwA2lAn0eW2ZhfJmGjpOOTeveeCn8oC24wXW+cfOeccXHdwVWK5IDRg0ZD6zvPFP0nwplEl9hrSlMNc2Nox+PjJQVYW8Sy9OI8NyrbyTLMftFLpakSugJFgICIXWROKQAhBeuQgDsoC4uoA65qcs9S44OGYP+02Ny4mJq1RqnbMMCJnZjkmqrQMdvxkuU3FrGg7AMuoJJrEg+PFMwbeeAJBlRXhKNWPAqO54QWRidcE2Wrr3pt78ggsSPRPIsR92VY/YO+kZsXta8S8ix/Lasfu5+lpr21Jl0ejqEISJAhCEACEIQBxeR+Xno2P1q/hTXri8h8vvRsfrV/8AGmgDySm5PseVCa9ONqJkGiW6pgZ2gqvvKwsnpHsHFI0k9si6xo2yBiUrt0EVRDB3pxpTBdiuymTJAITrQOCi3l0P4ppkWh8hF1NColsfKfAuRXJJPIlKNRJNVFILkdFE8EtlEgyY79qb5VBrFFIHuZYmvIgobVjDDf8AHeq0VUnliDKHRX6ZPfUGeSQ+pJ4KM6tKQaiQ1EkGoMd2xNcpjPckApt70iaR6Z5DnTba3/HP0jF7mvCPIQfy2v8AyD9JTXu6RJHUIQgYIQhAAhCEAC8f8v3RsfrV/wDGmvYF49/5AdGx+tX8KaAPGryWz2JlOgoETG1U3aas4KOaiReSSA6ugocEhMY4CtBaLZTexwwaSWgYswF4YiDnGKzkroKadEWkyaKLMOe3tH8RB6oAnjISWsEHnC9jAkRmPOmMiT2KMEIsdEzk24c8ZDdhOfnbP9cOGk3025HvgQOEyceHYIkoBRYUTXUWYxUB7PW3ngMvSCjlIvLl9AUKKQSiVwFIYuVy8klyCUCFF6Q5yCUmUAen+Qb9Nr/8c/SMXvK8F8g36bX/AOOfpGL3pAwQhCABCEIAEIQgAXj3/kD0bH61fwpoQgDxcJYQhIBLlxqEJgOPTaEJAdXQhCYHV0LqEAcXEIQB1cQhAAgIQgAKAhCBCVxCEAen+Qb9Nr/8c/SMXvSEIGCEIQAIQhAH/9k="
-        )
-        )
-
-        SongList.add(
-            AlbumModel(
-            "Night Visions",
-            "2012",
-            "https://cdn.pixabay.com/photo/2023/01/12/07/19/rat-7713508_960_720.jpg"        )
-        )
-
-
-       val view = inflater ?.inflate(R.layout.fragment_collection,container,false)
-
-        //recuperer ma recyclerview
-        val collectionRecyclerView = view?.findViewById<RecyclerView>(R.id.collection_recycler_list)
-
-
-        if (collectionRecyclerView != null) {
-            collectionRecyclerView.adapter =
-                ArtisteAdapter(context, SongList, R.layout.album_vertical)
+        arguments?.let {
+            requete = it.getString(SongFragment.REQUEST).toString()
         }
-        if (collectionRecyclerView != null) {
-            collectionRecyclerView.layoutManager = LinearLayoutManager(context)
+       val view = inflater.inflate(R.layout.fragment_collection,container,false)
+        albumAdapter = AlbumAdapter(context, album, R.layout.album_vertical)
+        val verticalRecycler = view?.findViewById<RecyclerView>(R.id.collection_recycler_list)
+        verticalRecycler?.adapter = albumAdapter
+        verticalRecycler?.layoutManager = LinearLayoutManager(context, LinearLayoutManager.VERTICAL, false)
+
+        progressBar = view?.findViewById(R.id.progress_bar)!!
+
+        lifecycleScope.launch(Dispatchers.IO) {
+            val client = OkHttpClient()
+            val request = Request.Builder()
+                .url(requete)
+                .header("User-Agent", "Repertoire de musique /1.0.0")
+                .build()
+            progressBar.visibility = View.VISIBLE
+            client.newCall(request).enqueue(object : Callback {
+                override fun onFailure(call: Call, e: IOException) {
+                    e.printStackTrace()
+                }
+
+                override fun onResponse(call: Call, response: Response) {
+
+                    val body = response.body?.string()
+                    val releasesJson = JSONObject(body).getJSONArray("releases")
+                    val albums = mutableListOf<AlbumModel>()
+
+                    for (i in 0 until 10) {
+                        val releaseJson = releasesJson.getJSONObject(i)
+                        val id = releaseJson.getString("id")
+                        val title = releaseJson.getString("title")
+                        val date: String? = if (releaseJson.has("date")) {
+                            releaseJson.getString("date")
+
+                        } else {
+                            "Date inconnue"
+                        }
+                        val imageUrl: String? = try {
+                            getArtistImage(id)
+                            // utiliser imageUrl
+                        } catch (e: FileNotFoundException) {
+                            // gérer l'erreur de fichier non trouvé
+                            ""
+                        }
+
+                        albums.add(AlbumModel(title, date, imageUrl, id))
+
+                    }
+
+                    handler.post {
+                        progressBar.visibility = View.INVISIBLE
+                    }
+                    albumListLiveData.postValue(albums)
+
+                }
+
+            })
+
         }
 
+        albumListLiveData.observe(viewLifecycleOwner, Observer { albums ->
+            album.clear()
+            album.addAll(albums)
+            albumAdapter.notifyDataSetChanged()
+        })
 
-       return view
+
+        return view
+    }
+
+    fun getArtistImage(artistMbid: String?): String? {
+        val url = "https://coverartarchive.org/release/$artistMbid"
+        val response: String?
+        try {
+            response = URL(url).readText()
+        }
+        catch (e: FileNotFoundException)
+        {
+            return null
+        }
+
+        val json = JSONObject(response)
+        val images = json.getJSONArray("images")
+        return if (images.length() > 0) {
+            images.getJSONObject(0).getString("image")
+        } else {
+            null
+        }
+    }
+
+    companion object {
+        const val REQUEST :String = "request"
     }
 }

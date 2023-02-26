@@ -4,19 +4,12 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent">
 
-    <ProgressBar
-        android:id="@+id/progress_bar"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_centerInParent="true"
-        android:layout_marginTop="60dp"/>
     <androidx.recyclerview.widget.RecyclerView
-        android:id="@+id/collection_recycler_list"
+        android:id="@+id/song_list"
+        android:layout_marginTop="100dp"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:layout_marginLeft="20dp"
         android:layout_marginBottom="80dp"/>
-
-
 
 </LinearLayout>

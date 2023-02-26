@@ -12,6 +12,7 @@
         android:layout_height="wrap_content"
         android:layout_marginLeft="20dp"
         android:layout_marginTop="10dp"
+        style="@style/Default"
         android:text="@string/home_page_title"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
@@ -20,10 +21,10 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="Les artistes"
-        android:textStyle="bold"
+        android:id="@+id/page_title"
+        style="@style/title"
         app:layout_constraintStart_toStartOf="@+id/textView"
         app:layout_constraintTop_toBottomOf="@+id/textView" />
-
     <FrameLayout
         android:id="@+id/fragment_container"
         android:layout_width="match_parent"
@@ -40,11 +41,6 @@
         app:layout_constraintStart_toStartOf="parent"
         android:background="@color/teal_200"
         app:menu="@menu/botton_navigation_menu"
-        app:itemTextColor="@drawable/button_nav_color"
-        app:itemIconTint="@drawable/button_nav_color"
-        android:theme="@style/BottomNavigationTheme"
-
-
-        />
+        app:itemTextColor="@drawable/button_nav_color" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>
